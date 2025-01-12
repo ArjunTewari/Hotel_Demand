@@ -234,9 +234,6 @@ By analyzing cancellation patterns and building a regression model, we gain acti
 
 
 if __name__== "__main__":
-    Gui(page).run(use_reloader=True, debug=True, port=5500)
-
-# #df_pred = pd.DataFrame({"Predictions": predictions, "Actual": y_test})
-#
-#
-# #print(f"MPAE: {mpae_1:.2f}%")
+    app = Gui(page)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
