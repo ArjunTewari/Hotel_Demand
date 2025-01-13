@@ -1,12 +1,34 @@
 from taipy import Gui
 import pandas as pd
 import numpy as np
+import os
 
 #LOADING THE DATA:
-data = pd.read_csv("hotel_bookings.csv")
-df = pd.DataFrame(data)
+# data = pd.read_csv("hotel_bookings.csv")
+# df = pd.DataFrame(data)
+# Process the CSV file in chunks
+chunks = pd.read_csv("hotel_bookings.csv", chunksize=1000)
+processed_chunks = []
+for chunk in chunks:
+    # Perform any processing you need on the chunk
+    chunk.fillna(method='ffill', inplace=True)
+    processed_chunks.append(chunk)
+
+df = pd.concat(processed_chunks)
+# Optimize memory usage
+for col in df.select_dtypes(include=["float", "int"]).columns:
+    df[col] = pd.to_numeric(df[col], downcast="float" if df[col].dtype == "float" else "integer")
+# Convert categorical columns to category type
+for col in df.select_dtypes(include=["object"]).columns:
+    df[col] = df[col].astype("category")
+
 df.fillna(method='ffill', inplace=True)
-df_encoded = pd.get_dummies(df, drop_first=True)
+# df_encoded = pd.get_dummies(df, drop_first=True)
+from sklearn.preprocessing import OneHotEncoder
+
+encoder = OneHotEncoder(drop="first", sparse=True)  # Use sparse matrix to save memory
+df_encoded = encoder.fit_transform(df.select_dtypes(include=["category"]))
+
 # Create a summary DataFrame for visualization
 columns = df.columns
 non_null_counts = df.notnull().sum()
@@ -22,10 +44,13 @@ summary_data = {
 # df = pd.DataFrame(iterative_imputer.fit_transform(df), columns=df.columns)
 
 #Checking which hotels are cancelled more:
-new_df = df.groupby("hotel")
-# Calculate cancellation percentages
-city_hotel_cancellations = int((new_df.get_group("City Hotel")["is_canceled"] == 1).sum())
-resort_hotel_cancellations = int((new_df.get_group("Resort Hotel")["is_canceled"] == 1).sum())
+city_hotel_cancellations = df.loc[df["hotel"] == "City Hotel", "is_canceled"].sum()
+resort_hotel_cancellations = df.loc[df["hotel"] == "Resort Hotel", "is_canceled"].sum()
+total_cancellations = df["is_canceled"].count()
+
+city_hotel = (city_hotel_cancellations / total_cancellations) * 100
+resort_hotel = (resort_hotel_cancellations / total_cancellations) * 100
+
 
 cancellation_data = {
     "Hotel Type": ["City Hotel", "Resort Hotel"],
@@ -57,7 +82,7 @@ y_test = test["is_canceled"]
 
 #Creating the model:
 from sklearn.ensemble import HistGradientBoostingClassifier
-model = HistGradientBoostingClassifier()
+model = HistGradientBoostingClassifier(categorical_features=True)
 
 from sklearn.preprocessing import StandardScaler
 
