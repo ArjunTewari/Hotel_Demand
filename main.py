@@ -26,7 +26,7 @@ df.fillna(method='ffill', inplace=True)
 # df_encoded = pd.get_dummies(df, drop_first=True)
 from sklearn.preprocessing import OneHotEncoder
 
-encoder = OneHotEncoder(drop="first", sparse=True)  # Use sparse matrix to save memory
+encoder = OneHotEncoder(drop="first")  # Use sparse matrix to save memory
 df_encoded = encoder.fit_transform(df.select_dtypes(include=["category"]))
 
 # Create a summary DataFrame for visualization
